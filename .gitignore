@@ -1,0 +1,10 @@
+# LLVM repository
+llvm-project/
+
+# Build artifacts
+build-llvm/
+
+# macOS / OS files
+.DS_Store
+*.swp
+*~

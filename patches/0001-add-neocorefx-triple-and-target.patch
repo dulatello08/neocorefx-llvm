@@ -1,0 +1,110 @@
+diff --git a/llvm/CMakeLists.txt b/llvm/CMakeLists.txt
+index 6dbe47600..f59991c84 100644
+--- a/llvm/CMakeLists.txt
++++ b/llvm/CMakeLists.txt
+@@ -539,6 +539,7 @@ set(LLVM_ALL_TARGETS
+   LoongArch
+   Mips
+   MSP430
++  NeoCoreFX
+   NVPTX
+   PowerPC
+   RISCV
+diff --git a/llvm/include/llvm/TargetParser/Triple.h b/llvm/include/llvm/TargetParser/Triple.h
+index 8d238a527..14ff965e6 100644
+--- a/llvm/include/llvm/TargetParser/Triple.h
++++ b/llvm/include/llvm/TargetParser/Triple.h
+@@ -110,7 +110,8 @@ public:
+     renderscript32, // 32-bit RenderScript
+     renderscript64, // 64-bit RenderScript
+     ve,             // NEC SX-Aurora Vector Engine
+-    LastArchType = ve
++    neocorefx,      // NeoCoreFX: NeoCoreFX 32-bit
++    LastArchType = neocorefx
+   };
+   enum SubArchType {
+     NoSubArch,
+diff --git a/llvm/lib/TargetParser/Triple.cpp b/llvm/lib/TargetParser/Triple.cpp
+index c80cee399..30c65bf94 100644
+--- a/llvm/lib/TargetParser/Triple.cpp
++++ b/llvm/lib/TargetParser/Triple.cpp
+@@ -82,6 +82,7 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
+   case thumb:          return "thumb";
+   case thumbeb:        return "thumbeb";
+   case ve:             return "ve";
++  case neocorefx:      return "neocorefx";
+   case wasm32:         return "wasm32";
+   case wasm64:         return "wasm64";
+   case x86:            return "i386";
+@@ -240,6 +241,7 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
+ 
+   case kalimba:     return "kalimba";
+   case lanai:       return "lanai";
++  case neocorefx:   return "neocorefx";
+   case shave:       return "shave";
+   case wasm32:
+   case wasm64:      return "wasm";
+@@ -513,6 +515,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
+       .Case("spirv64", spirv64)
+       .Case("kalimba", kalimba)
+       .Case("lanai", lanai)
++      .Case("neocorefx", neocorefx)
+       .Case("shave", shave)
+       .Case("wasm32", wasm32)
+       .Case("wasm64", wasm64)
+@@ -662,6 +665,7 @@ static Triple::ArchType parseArch(StringRef ArchName) {
+                  Triple::spirv64)
+           .StartsWith("kalimba", Triple::kalimba)
+           .Case("lanai", Triple::lanai)
++          .Case("neocorefx", Triple::neocorefx)
+           .Case("renderscript32", Triple::renderscript32)
+           .Case("renderscript64", Triple::renderscript64)
+           .Case("shave", Triple::shave)
+@@ -1007,6 +1011,7 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
+   case Triple::hsail:
+   case Triple::kalimba:
+   case Triple::lanai:
++  case Triple::neocorefx:
+   case Triple::loongarch32:
+   case Triple::loongarch64:
+   case Triple::m68k:
+@@ -1751,6 +1756,7 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
+   case llvm::Triple::hsail:
+   case llvm::Triple::kalimba:
+   case llvm::Triple::lanai:
++  case llvm::Triple::neocorefx:
+   case llvm::Triple::loongarch32:
+   case llvm::Triple::m68k:
+   case llvm::Triple::mips:
+@@ -1861,6 +1867,7 @@ Triple Triple::get32BitArchVariant() const {
+   case Triple::hsail:
+   case Triple::kalimba:
+   case Triple::lanai:
++  case Triple::neocorefx:
+   case Triple::loongarch32:
+   case Triple::m68k:
+   case Triple::mips:
+@@ -1930,6 +1937,7 @@ Triple Triple::get64BitArchVariant() const {
+   case Triple::hexagon:
+   case Triple::kalimba:
+   case Triple::lanai:
++  case Triple::neocorefx:
+   case Triple::m68k:
+   case Triple::msp430:
+   case Triple::r600:
+@@ -2080,6 +2088,7 @@ Triple Triple::getLittleEndianArchVariant() const {
+   switch (getArch()) {
+   case Triple::UnknownArch:
+   case Triple::lanai:
++  case Triple::neocorefx:
+   case Triple::sparcv9:
+   case Triple::systemz:
+   case Triple::m68k:
+@@ -2389,6 +2398,7 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
+   case Triple::csky:
+   case Triple::hexagon:
+   case Triple::lanai:
++  case Triple::neocorefx:
+   case Triple::m68k:
+   case Triple::msp430:
+   case Triple::systemz:
