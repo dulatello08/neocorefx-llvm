@@ -8,3 +8,14 @@ build-llvm/
 .DS_Store
 *.swp
 *~
+
+# Generated testing outputs
+tests/*.ll
+tests/*.s
+!tests/test.ll
+!tests/test.s
+
+# IDEs
+.idea/
+.vscode/
+*.swp
