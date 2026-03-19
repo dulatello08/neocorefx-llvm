@@ -22,6 +22,7 @@ include "NeoCoreFXCallingConv.td"
 include "NeoCoreFXInstrInfo.td"
 
 def NeoCoreFXInstrInfo : InstrInfo;
+defm : RemapAllTargetPseudoPointerOperands<GPR>;
 
 //===----------------------------------------------------------------------===//
 // NeoCoreFX processors supported.

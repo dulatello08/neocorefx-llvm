@@ -27,11 +27,11 @@ using namespace llvm;
 
 NeoCoreFXTargetLowering::NeoCoreFXTargetLowering(const TargetMachine &TM,
                                                  const NeoCoreFXSubtarget &STI)
-    : TargetLowering(TM), Subtarget(STI) {
+    : TargetLowering(TM, STI), Subtarget(STI) {
 
   // Set up register classes
   addRegisterClass(MVT::i32, &NeoCoreFX::GPRRegClass);
-  computeRegisterProperties(Subtarget.getRegisterInfo()->getRegInfoDesc());
+  computeRegisterProperties(Subtarget.getRegisterInfo());
 
   // Set scheduling preference
   setSchedulingPreference(Sched::RegPressure);
@@ -81,6 +81,7 @@ NeoCoreFXTargetLowering::NeoCoreFXTargetLowering(const TargetMachine &TM,
 
 const char *NeoCoreFXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<NeoCoreFXISD::NodeType>(Opcode)) {
+  case NeoCoreFXISD::FIRST_NUMBER: break;
   case NeoCoreFXISD::RET:  return "NeoCoreFXISD::RET";
   case NeoCoreFXISD::CALL: return "NeoCoreFXISD::CALL";
   }
@@ -178,7 +179,8 @@ SDValue NeoCoreFXTargetLowering::LowerCall(
 
 bool NeoCoreFXTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_NeoCoreFX);

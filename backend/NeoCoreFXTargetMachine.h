@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_NEOCOREFX_NEOCOREFXTARGETMACHINE_H
 
 #include "NeoCoreFXSubtarget.h"
+#include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {

@@ -10,7 +10,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCELFObjectWriter.h"
-#include "llvm/MC/MCFixupKindInfo.h"
+#include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -25,19 +25,13 @@ public:
   NeoCoreFXAsmBackend(const MCSubtargetInfo &STI, const MCTargetOptions &Options)
       : MCAsmBackend(llvm::endianness::big) {}
 
-  unsigned getNumFixupKinds() const override { return 0; }
 
-  void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
-                  const MCValue &Target, MutableArrayRef<char> Data,
-                  uint64_t Value, bool IsResolved,
-                  const MCSubtargetInfo *STI) const override {
+  void applyFixup(const MCFragment &, const MCFixup &Fixup,
+                  const MCValue &Target, uint8_t *Data,
+                  uint64_t Value, bool IsResolved) override {
     // TODO: Implement fixup application for relocations
   }
 
-  bool fixupNeedsRelaxation(const MCFixup &Fixup,
-                            uint64_t Value) const override {
-    return false;
-  }
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override {

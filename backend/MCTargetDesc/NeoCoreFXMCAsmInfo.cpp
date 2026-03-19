@@ -23,4 +23,5 @@ NeoCoreFXMCAsmInfo::NeoCoreFXMCAsmInfo(const Triple &TT) {
 
   // Code alignment (4-byte instructions)
   MinInstAlignment = 4;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

@@ -9,6 +9,7 @@
 #include "NeoCoreFXFrameLowering.h"
 #include "NeoCoreFXInstrInfo.h"
 #include "NeoCoreFXSubtarget.h"
+#include "MCTargetDesc/NeoCoreFXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -69,7 +70,7 @@ void NeoCoreFXFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-bool NeoCoreFXFrameLowering::hasFP(const MachineFunction &MF) const {
+bool NeoCoreFXFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   return MF.getFrameInfo().hasVarSizedObjects();
 }
 

@@ -8,6 +8,8 @@
 
 #include "NeoCoreFXInstrInfo.h"
 #include "NeoCoreFX.h"
+#include "MCTargetDesc/NeoCoreFXMCTargetDesc.h"
+#include "NeoCoreFXSubtarget.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 
@@ -16,15 +18,17 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "NeoCoreFXGenInstrInfo.inc"
 
-NeoCoreFXInstrInfo::NeoCoreFXInstrInfo()
-    : NeoCoreFXGenInstrInfo(NeoCoreFX::ADJCALLSTACKDOWN,
+NeoCoreFXInstrInfo::NeoCoreFXInstrInfo(const NeoCoreFXSubtarget &STI)
+    : NeoCoreFXGenInstrInfo(STI, RI, NeoCoreFX::ADJCALLSTACKDOWN,
                             NeoCoreFX::ADJCALLSTACKUP),
       RI() {}
 
 void NeoCoreFXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator MI,
-                                     const DebugLoc &DL, MCRegister DestReg,
-                                     MCRegister SrcReg, bool KillSrc) const {
+                                     const DebugLoc &DL, Register DestReg,
+                                     Register SrcReg, bool KillSrc,
+                                     bool RenamableDest,
+                                     bool RenamableSrc) const {
   // MOV rd, rs  →  ADDI rd, rs, 0
   BuildMI(MBB, MI, DL, get(NeoCoreFX::ADDI), DestReg)
       .addReg(SrcReg, getKillRegState(KillSrc))
@@ -34,7 +38,7 @@ void NeoCoreFXInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void NeoCoreFXInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool IsKill, int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end())
     DL = MI->getDebugLoc();
@@ -48,7 +52,7 @@ void NeoCoreFXInstrInfo::storeRegToStackSlot(
 void NeoCoreFXInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
     int FrameIndex, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    Register VReg, unsigned SubReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL;
   if (MI != MBB.end())
     DL = MI->getDebugLoc();

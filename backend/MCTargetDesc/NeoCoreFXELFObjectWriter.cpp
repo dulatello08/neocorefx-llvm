@@ -7,8 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "NeoCoreFXMCTargetDesc.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -20,8 +24,8 @@ public:
                                 /*EMachine=*/ELF::EM_NONE,
                                 /*HasRelocationAddend=*/true) {}
 
-  unsigned getRelocType(MCContext &Ctx, const MCValue &Target,
-                        const MCFixup &Fixup, bool IsPCRel) const override {
+  unsigned getRelocType(const MCFixup &Fixup, const MCValue &Target,
+                        bool IsPCRel) const override {
     // TODO: Map fixup kinds to ELF relocation types
     return ELF::R_386_NONE;
   }

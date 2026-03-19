@@ -9,6 +9,7 @@
 #include "NeoCoreFXRegisterInfo.h"
 #include "NeoCoreFX.h"
 #include "NeoCoreFXSubtarget.h"
+#include "MCTargetDesc/NeoCoreFXMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"

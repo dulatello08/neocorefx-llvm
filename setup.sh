@@ -40,6 +40,6 @@ TARGET_DIR="llvm/lib/Target/NeoCoreFX"
 if [ -L "$TARGET_DIR" ] || [ -d "$TARGET_DIR" ]; then
     rm -rf "$TARGET_DIR"
 fi
-ln -s "../../../../../$BACKEND_DIR" "$TARGET_DIR"
+ln -s "../../../../$BACKEND_DIR" "$TARGET_DIR"
 
 echo "Setup complete! Run \`./build.sh\` to compile llc."

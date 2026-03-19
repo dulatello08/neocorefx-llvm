@@ -56,13 +56,19 @@ def brtarget20 : Operand<OtherVT> {
 // SDNode definitions for custom nodes
 //===----------------------------------------------------------------------===//
 
+def SDT_SPCall : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def SDT_NeoCoreFXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_NeoCoreFXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+
 def NeoCoreFXRet     : SDNode<"NeoCoreFXISD::RET", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def NeoCoreFXCall    : SDNode<"NeoCoreFXISD::CALL", SDT_SPCall,
                                [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                                 SDNPVariadic]>;
-
-def SDT_SPCall : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
+def CallSeqStart     : SDNode<"ISD::CALLSEQ_START", SDT_NeoCoreFXCallSeqStart,
+                              [SDNPHasChain, SDNPOutGlue]>;
+def CallSeqEnd       : SDNode<"ISD::CALLSEQ_END", SDT_NeoCoreFXCallSeqEnd,
+                              [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
 
 //===----------------------------------------------------------------------===//
 // 4.1 Integer ALU (Register) — Class 0x0
@@ -182,6 +188,9 @@ def SRAI : InstI16<0x1, 0x7, (outs GPR:$rd), (ins GPR:$rs1, shamt5:$imm16),
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
+// Patterns for constants
+def : Pat<(i32 simm16:$imm), (ADDI R0, simm16:$imm)>;
+
 //===----------------------------------------------------------------------===//
 // 4.5 Load — Class 0x2
 //===----------------------------------------------------------------------===//
@@ -300,8 +309,8 @@ def LI32 : Pseudo<(outs GPR:$rd), (ins i32imm:$imm),
 let Defs = [R15], Uses = [R15], hasSideEffects = 1 in {
 def ADJCALLSTACKDOWN : Pseudo<(outs), (ins i32imm:$amt, i32imm:$amt2),
                               "# ADJCALLSTACKDOWN $amt",
-                              [(callseq_start timm:$amt, timm:$amt2)]>;
+                              [(CallSeqStart timm:$amt, timm:$amt2)]>;
 def ADJCALLSTACKUP   : Pseudo<(outs), (ins i32imm:$amt, i32imm:$amt2),
                               "# ADJCALLSTACKUP $amt",
-                              [(callseq_end timm:$amt, timm:$amt2)]>;
+                              [(CallSeqEnd timm:$amt, timm:$amt2)]>;
 }

@@ -8,6 +8,7 @@
 
 #include "NeoCoreFX.h"
 #include "NeoCoreFXTargetMachine.h"
+#include "MCTargetDesc/NeoCoreFXMCTargetDesc.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 
 using namespace llvm;
@@ -27,7 +28,7 @@ public:
   // Include auto-generated selector
   #include "NeoCoreFXGenDAGISel.inc"
 
-  StringRef getPassName() const override {
+  StringRef getPassName() const {
     return "NeoCoreFX DAG->DAG Pattern Instruction Selection";
   }
 };

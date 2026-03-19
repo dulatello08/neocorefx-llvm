@@ -47,6 +47,12 @@ createNeoCoreFXMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   return createNeoCoreFXMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, FS);
 }
 
+static MCAsmInfo *createNeoCoreFXMCAsmInfo(const MCRegisterInfo &MRI,
+                                           const Triple &TT,
+                                           const MCTargetOptions &Options) {
+  return new NeoCoreFXMCAsmInfo(TT);
+}
+
 static MCInstPrinter *createNeoCoreFXMCInstPrinter(const Triple &T,
                                                    unsigned SyntaxVariant,
                                                    const MCAsmInfo &MAI,
@@ -62,6 +68,7 @@ LLVMInitializeNeoCoreFXTargetMC() {
   TargetRegistry::RegisterMCInstrInfo(T, createNeoCoreFXMCInstrInfo);
   TargetRegistry::RegisterMCRegInfo(T, createNeoCoreFXMCRegisterInfo);
   TargetRegistry::RegisterMCSubtargetInfo(T, createNeoCoreFXMCSubtargetInfo);
+  TargetRegistry::RegisterMCAsmInfo(T, createNeoCoreFXMCAsmInfo);
   TargetRegistry::RegisterMCInstPrinter(T, createNeoCoreFXMCInstPrinter);
   TargetRegistry::RegisterMCAsmBackend(T, createNeoCoreFXAsmBackend);
   TargetRegistry::RegisterMCCodeEmitter(T, createNeoCoreFXMCCodeEmitter);

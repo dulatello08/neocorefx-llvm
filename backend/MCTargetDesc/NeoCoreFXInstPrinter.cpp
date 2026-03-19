@@ -37,7 +37,7 @@ void NeoCoreFXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   else if (Op.isImm())
     O << Op.getImm();
   else if (Op.isExpr())
-    Op.getExpr()->print(O, &MAI);
+    MAI.printExpr(O, *Op.getExpr());
   else
     llvm_unreachable("Unknown operand kind in printOperand");
 }

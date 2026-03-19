@@ -12,6 +12,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -20,12 +21,11 @@ using namespace llvm;
 
 namespace {
 class NeoCoreFXMCCodeEmitter : public MCCodeEmitter {
-  const MCInstrInfo &MCII;
   MCContext &Ctx;
 
 public:
-  NeoCoreFXMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx)
-      : MCII(MCII), Ctx(Ctx) {}
+  NeoCoreFXMCCodeEmitter(MCContext &Ctx)
+      : Ctx(Ctx) {}
 
   void encodeInstruction(const MCInst &MI, SmallVectorImpl<char> &CB,
                          SmallVectorImpl<MCFixup> &Fixups,
@@ -38,6 +38,14 @@ public:
   unsigned getMachineOpValue(const MCInst &MI, const MCOperand &MO,
                              SmallVectorImpl<MCFixup> &Fixups,
                              const MCSubtargetInfo &STI) const;
+
+  unsigned encodeBrTarget16(const MCInst &MI, unsigned OpNo,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
+
+  unsigned encodeBrTarget20(const MCInst &MI, unsigned OpNo,
+                            SmallVectorImpl<MCFixup> &Fixups,
+                            const MCSubtargetInfo &STI) const;
 };
 } // namespace
 
@@ -64,7 +72,29 @@ unsigned NeoCoreFXMCCodeEmitter::getMachineOpValue(
 
 MCCodeEmitter *llvm::createNeoCoreFXMCCodeEmitter(const MCInstrInfo &MCII,
                                                   MCContext &Ctx) {
-  return new NeoCoreFXMCCodeEmitter(MCII, Ctx);
+  return new NeoCoreFXMCCodeEmitter(Ctx);
+}
+
+unsigned NeoCoreFXMCCodeEmitter::encodeBrTarget16(const MCInst &MI, unsigned OpNo,
+                                                  SmallVectorImpl<MCFixup> &Fixups,
+                                                  const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isImm())
+    return MO.getImm() & 0xffff;
+  
+  // TODO: Add proper fixup encoding
+  return 0;
+}
+
+unsigned NeoCoreFXMCCodeEmitter::encodeBrTarget20(const MCInst &MI, unsigned OpNo,
+                                                  SmallVectorImpl<MCFixup> &Fixups,
+                                                  const MCSubtargetInfo &STI) const {
+  const MCOperand &MO = MI.getOperand(OpNo);
+  if (MO.isImm())
+    return MO.getImm() & 0xfffff;
+  
+  // TODO: Add proper fixup encoding
+  return 0;
 }
 
 #include "NeoCoreFXGenMCCodeEmitter.inc"

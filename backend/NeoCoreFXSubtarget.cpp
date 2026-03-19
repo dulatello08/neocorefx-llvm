@@ -21,7 +21,7 @@ using namespace llvm;
 NeoCoreFXSubtarget::NeoCoreFXSubtarget(const Triple &TT, StringRef CPU,
                                        StringRef FS, const TargetMachine &TM)
     : NeoCoreFXGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      InstrInfo(),
+      InstrInfo(*this),
       FrameLowering(),
       TLInfo(TM, *this) {
   ParseSubtargetFeatures(CPU, /*TuneCPU=*/CPU, FS);
