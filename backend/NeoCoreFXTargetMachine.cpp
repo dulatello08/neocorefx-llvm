@@ -39,6 +39,40 @@ static std::string computeDataLayoutString() {
   return "E-m:e-p:32:32-i32:32-n32-S32";
 }
 
+namespace {
+
+class NeoCoreFXTargetLoweringObjectFile : public TargetLoweringObjectFileELF {
+  static SectionKind coerceSectionKind(SectionKind Kind) {
+    if (Kind.isReadOnly())
+      return SectionKind::getData();
+    return Kind;
+  }
+
+public:
+  MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
+                                    const TargetMachine &TM) const override {
+    return TargetLoweringObjectFileELF::SelectSectionForGlobal(
+        GO, coerceSectionKind(Kind), TM);
+  }
+
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F) const override {
+    return TargetLoweringObjectFileELF::getSectionForConstant(
+        DL, coerceSectionKind(Kind), C, Alignment, F);
+  }
+
+  MCSection *getSectionForConstant(const DataLayout &DL, SectionKind Kind,
+                                   const Constant *C, Align &Alignment,
+                                   const Function *F,
+                                   StringRef SectionSuffix) const override {
+    return TargetLoweringObjectFileELF::getSectionForConstant(
+        DL, coerceSectionKind(Kind), C, Alignment, F, SectionSuffix);
+  }
+};
+
+} // namespace
+
 NeoCoreFXTargetMachine::NeoCoreFXTargetMachine(
     const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
     const TargetOptions &Options, std::optional<Reloc::Model> RM,
@@ -48,7 +82,7 @@ NeoCoreFXTargetMachine::NeoCoreFXTargetMachine(
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
       Subtarget(TT, CPU.empty() ? "generic" : std::string(CPU), FS, *this),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()) {
+      TLOF(std::make_unique<NeoCoreFXTargetLoweringObjectFile>()) {
   initAsmInfo();
 }
 

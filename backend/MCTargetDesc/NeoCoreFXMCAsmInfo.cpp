@@ -12,16 +12,34 @@
 using namespace llvm;
 
 NeoCoreFXMCAsmInfo::NeoCoreFXMCAsmInfo(const Triple &TT) {
-  // NeoCoreFX uses '#' for comments, ';' as statement separator
-  CommentString = "#";
-  SupportsDebugInformation = true;
-  Data16bitsDirective = "\t.half\t";
-  Data32bitsDirective = "\t.word\t";
-  Data64bitsDirective = nullptr; // No 64-bit data type
-  ZeroDirective = "\t.zero\t";
+  // Emit assembly in the syntax expected by nc-as.
+  CommentString = ";";
+  IsLittleEndian = false;
+  GlobalDirective = "\t.global\t";
+  PrivateLabelPrefix = "L_";
+  LinkerPrivateGlobalPrefix = "L_";
+
+  // Keep emitted directives to the small subset the assembler supports.
+  HasDotTypeDotSizeDirective = false;
+  HasIdentDirective = false;
+  SupportsDebugInformation = false;
+  HasSingleParameterDotFile = false;
+  ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  // .align uses byte alignment in nc-as.
+  AlignmentIsInBytes = true;
+
+  // nc-as parser treats byte data as "db". By leaving 16/32-bit directives null,
+  // MCAsmStreamer falls back to emitting byte directives.
+  Data8bitsDirective = "\tdb\t";
+  Data16bitsDirective = nullptr;
+  Data32bitsDirective = nullptr;
+  Data64bitsDirective = nullptr;
+  ZeroDirective = "\t.space\t";
+  AscizDirective = nullptr;
+  AsciiDirective = nullptr;
   UsesELFSectionDirectiveForBSS = true;
 
-  // Code alignment (4-byte instructions)
+  // Instructions are 4-byte aligned.
   MinInstAlignment = 4;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
 }

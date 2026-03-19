@@ -18,7 +18,6 @@ using namespace llvm;
 #define DEBUG_TYPE "asm-printer"
 
 // Include the auto-generated portion of the assembly writer.
-#define PRINT_ALIAS_INSTR
 #include "NeoCoreFXGenAsmWriter.inc"
 
 void NeoCoreFXInstPrinter::printInst(const MCInst *MI, uint64_t Address,
@@ -35,7 +34,7 @@ void NeoCoreFXInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg())
     O << getRegisterName(Op.getReg());
   else if (Op.isImm())
-    O << Op.getImm();
+    O << "#" << Op.getImm();
   else if (Op.isExpr())
     MAI.printExpr(O, *Op.getExpr());
   else
@@ -47,9 +46,16 @@ void NeoCoreFXInstPrinter::printMemOperand(const MCInst *MI, unsigned OpNo,
   const MCOperand &Base = MI->getOperand(OpNo);
   const MCOperand &Offset = MI->getOperand(OpNo + 1);
 
-  if (Offset.isImm() && Offset.getImm() != 0)
-    O << Offset.getImm();
-  O << "(";
+  O << "[";
   O << getRegisterName(Base.getReg());
-  O << ")";
+  O << " + ";
+  if (Offset.isImm()) {
+    O << "#" << Offset.getImm();
+  } else if (Offset.isExpr()) {
+    O << "#";
+    MAI.printExpr(O, *Offset.getExpr());
+  } else {
+    llvm_unreachable("Unknown offset kind in printMemOperand");
+  }
+  O << "]";
 }

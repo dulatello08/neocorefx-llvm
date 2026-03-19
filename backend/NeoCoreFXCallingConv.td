@@ -41,5 +41,6 @@ def RetCC_NeoCoreFX : CallingConv<[
   CCIfType<[i32], CCAssignToReg<[R2]>>
 ]>;
 
-// Callee-saved registers
-def CSR_NeoCoreFX : CalleeSavedRegs<(add R8, R9, R10, R14)>;
+// Callee-saved registers.
+// R11 is the dedicated link register and must survive nested calls.
+def CSR_NeoCoreFX : CalleeSavedRegs<(add R8, R9, R10, R11, R14)>;

@@ -71,6 +71,7 @@ NeoCoreFXTargetLowering::NeoCoreFXTargetLowering(const TargetMachine &TM,
 
   // GlobalAddress lowering
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::ExternalSymbol, MVT::i32, Custom);
 
   // Dynamic stack allocation
   setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i32, Expand);
@@ -84,6 +85,7 @@ const char *NeoCoreFXTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case NeoCoreFXISD::FIRST_NUMBER: break;
   case NeoCoreFXISD::RET:  return "NeoCoreFXISD::RET";
   case NeoCoreFXISD::CALL: return "NeoCoreFXISD::CALL";
+  case NeoCoreFXISD::LA:   return "NeoCoreFXISD::LA";
   }
   return nullptr;
 }
@@ -92,15 +94,21 @@ SDValue NeoCoreFXTargetLowering::LowerOperation(SDValue Op,
                                                 SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
   case ISD::GlobalAddress: {
-    // Lower GlobalAddress to LUI + ORI sequence
     const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
     const GlobalValue *GV = GA->getGlobal();
     SDValue GANode = DAG.getTargetGlobalAddress(GV, DL, VT, GA->getOffset());
-    // For now, materialize as a generic constant
-    // TODO: Use LUI+ORI or LPC pattern
-    return DAG.getNode(ISD::Constant, DL, VT, GANode);
+    SDValue Base = DAG.getNode(NeoCoreFXISD::LA, DL, VT, GANode);
+    return DAG.getNode(ISD::ADD, DL, VT, Base, DAG.getConstant(0, DL, VT));
+  }
+  case ISD::ExternalSymbol: {
+    const ExternalSymbolSDNode *ES = cast<ExternalSymbolSDNode>(Op);
+    SDLoc DL(Op);
+    EVT VT = Op.getValueType();
+    SDValue Sym = DAG.getTargetExternalSymbol(ES->getSymbol(), VT);
+    SDValue Base = DAG.getNode(NeoCoreFXISD::LA, DL, VT, Sym);
+    return DAG.getNode(ISD::ADD, DL, VT, Base, DAG.getConstant(0, DL, VT));
   }
   default:
     llvm_unreachable("Custom lowering not implemented for this operation");
@@ -127,6 +135,7 @@ SDValue NeoCoreFXTargetLowering::LowerFormalArguments(
       RegInfo.addLiveIn(VA.getLocReg(), VReg);
       SDValue ArgVal = DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32);
       InVals.push_back(ArgVal);
+      Chain = ArgVal.getValue(1);
     } else {
       // Argument passed on stack
       assert(VA.isMemLoc() && "Expected memory location for argument");
@@ -136,6 +145,7 @@ SDValue NeoCoreFXTargetLowering::LowerFormalArguments(
       SDValue Load = DAG.getLoad(MVT::i32, DL, Chain, FIN,
                                   MachinePointerInfo::getFixedStack(MF, FI));
       InVals.push_back(Load);
+      Chain = Load.getValue(1);
     }
   }
 
@@ -173,8 +183,110 @@ SDValue NeoCoreFXTargetLowering::LowerReturn(
 SDValue NeoCoreFXTargetLowering::LowerCall(
     TargetLowering::CallLoweringInfo &CLI,
     SmallVectorImpl<SDValue> &InVals) const {
-  // TODO: Implement call lowering
-  report_fatal_error("NeoCoreFX call lowering not yet implemented");
+  CLI.IsTailCall = false;
+
+  SelectionDAG &DAG = CLI.DAG;
+  SDLoc DL = CLI.DL;
+  MachineFunction &MF = DAG.getMachineFunction();
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(CLI.CallConv, CLI.IsVarArg, MF, ArgLocs, *DAG.getContext());
+  CCInfo.AnalyzeCallOperands(CLI.Outs, CC_NeoCoreFX);
+
+  unsigned NumBytes = CCInfo.getStackSize();
+  SDValue Chain = CLI.Chain;
+  Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, DL);
+
+  SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
+  SmallVector<SDValue, 8> MemOpChains;
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
+
+  for (unsigned i = 0; i < ArgLocs.size(); ++i) {
+    CCValAssign &VA = ArgLocs[i];
+    SDValue Arg = CLI.OutVals[i];
+
+    if (VA.getLocInfo() == CCValAssign::SExt)
+      Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Arg);
+    else if (VA.getLocInfo() == CCValAssign::ZExt)
+      Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
+    else if (VA.getLocInfo() == CCValAssign::AExt)
+      Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
+
+    if (VA.isRegLoc()) {
+      RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      continue;
+    }
+
+    assert(VA.isMemLoc() && "Unexpected non-register/non-memory argument");
+    SDValue StackPtr = DAG.getRegister(NeoCoreFX::R15, PtrVT);
+    SDValue PtrOff = DAG.getIntPtrConstant(VA.getLocMemOffset(), DL);
+    SDValue Address = DAG.getNode(ISD::ADD, DL, PtrVT, StackPtr, PtrOff);
+    MemOpChains.push_back(DAG.getStore(Chain, DL, Arg, Address, MachinePointerInfo()));
+  }
+
+  if (!MemOpChains.empty())
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+
+  SDValue Glue;
+  for (const auto &[Reg, Value] : RegsToPass) {
+    Chain = DAG.getCopyToReg(Chain, DL, Reg, Value, Glue);
+    Glue = Chain.getValue(1);
+  }
+
+  SDValue Callee = CLI.Callee;
+  if (const auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, G->getOffset());
+  } else if (const auto *ES = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    Callee = DAG.getTargetExternalSymbol(ES->getSymbol(), PtrVT);
+  } else {
+    report_fatal_error("NeoCoreFX only supports direct symbol calls");
+  }
+
+  SmallVector<SDValue, 8> Ops;
+  Ops.push_back(Chain);
+  Ops.push_back(Callee);
+
+  for (const auto &[Reg, Value] : RegsToPass)
+    Ops.push_back(DAG.getRegister(Reg, Value.getValueType()));
+
+  const uint32_t *Mask =
+      Subtarget.getRegisterInfo()->getCallPreservedMask(MF, CLI.CallConv);
+  Ops.push_back(DAG.getRegisterMask(Mask));
+
+  if (Glue.getNode())
+    Ops.push_back(Glue);
+
+  SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+  Chain = DAG.getNode(NeoCoreFXISD::CALL, DL, NodeTys, Ops);
+  Glue = Chain.getValue(1);
+
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, Glue, DL);
+  Glue = Chain.getValue(1);
+
+  SmallVector<CCValAssign, 16> RVLocs;
+  CCState RetCCInfo(CLI.CallConv, CLI.IsVarArg, MF, RVLocs, *DAG.getContext());
+  RetCCInfo.AnalyzeCallResult(CLI.Ins, RetCC_NeoCoreFX);
+
+  for (const CCValAssign &VA : RVLocs) {
+    SDValue Val =
+        DAG.getCopyFromReg(Chain, DL, VA.getLocReg(), VA.getLocVT(), Glue);
+    Chain = Val.getValue(1);
+    Glue = Val.getValue(2);
+
+    if (VA.getLocInfo() == CCValAssign::SExt)
+      Val = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Val,
+                        DAG.getValueType(VA.getValVT()));
+    else if (VA.getLocInfo() == CCValAssign::ZExt)
+      Val = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Val,
+                        DAG.getValueType(VA.getValVT()));
+
+    if (VA.getLocVT() != VA.getValVT())
+      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
+
+    InVals.push_back(Val);
+  }
+
+  return Chain;
 }
 
 bool NeoCoreFXTargetLowering::CanLowerReturn(

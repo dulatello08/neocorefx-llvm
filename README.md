@@ -2,6 +2,12 @@
 
 This repository contains the out-of-tree LLVM backend for the NeoCoreFX architecture.
 
+## Current Scope
+
+- Primary supported workflow: `C -> LLVM IR -> NeoCoreFX assembly (.s)`.
+- Recommended backend invocation: `llc -march=neocorefx -filetype=asm`.
+- Object/machine-code emission paths are currently not the focus of this repository.
+
 ## Repository Structure
 
 Managing a full fork of `llvm-project` can be unwieldy due to its massive size. This project is structured as an "out-of-tree" backend to keep the repository small and focused purely on NeoCoreFX.

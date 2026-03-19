@@ -41,6 +41,8 @@ BitVector NeoCoreFXRegisterInfo::getReservedRegs(const MachineFunction &MF) cons
   Reserved.set(NeoCoreFX::R0);
   // r1 is assembler temporary
   Reserved.set(NeoCoreFX::R1);
+  // r11 is dedicated link register
+  Reserved.set(NeoCoreFX::R11);
   // r15 is stack pointer
   Reserved.set(NeoCoreFX::R15);
   // r14 is frame pointer (when used)

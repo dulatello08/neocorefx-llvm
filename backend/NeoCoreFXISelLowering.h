@@ -18,6 +18,7 @@ enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
   RET,
   CALL,
+  LA,
 };
 } // namespace NeoCoreFXISD
 

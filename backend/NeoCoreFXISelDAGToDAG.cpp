@@ -54,6 +54,17 @@ void NeoCoreFXDAGToDAGISel::Select(SDNode *N) {
     return;
   }
 
+  if (N->getOpcode() == ISD::FrameIndex) {
+    SDLoc DL(N);
+    int FI = cast<FrameIndexSDNode>(N)->getIndex();
+    SDValue TFI = CurDAG->getTargetFrameIndex(FI, MVT::i32);
+    SDNode *Res = CurDAG->getMachineNode(
+        NeoCoreFX::ADDI, DL, MVT::i32, TFI,
+        CurDAG->getTargetConstant(0, DL, MVT::i32));
+    ReplaceNode(N, Res);
+    return;
+  }
+
   // Try auto-generated patterns first
   SelectCode(N);
 }

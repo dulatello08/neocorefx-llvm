@@ -52,6 +52,9 @@ def brtarget20 : Operand<OtherVT> {
   let DecoderMethod = "decodeBrTarget20";
 }
 
+// Symbol address operand used by assembly-only pseudos.
+def symaddr : Operand<i32>;
+
 //===----------------------------------------------------------------------===//
 // SDNode definitions for custom nodes
 //===----------------------------------------------------------------------===//
@@ -59,12 +62,14 @@ def brtarget20 : Operand<OtherVT> {
 def SDT_SPCall : SDTypeProfile<0, -1, [SDTCisVT<0, i32>]>;
 def SDT_NeoCoreFXCallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 def SDT_NeoCoreFXCallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
+def SDT_NeoCoreFXLA : SDTypeProfile<1, 1, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>;
 
 def NeoCoreFXRet     : SDNode<"NeoCoreFXISD::RET", SDTNone,
                                [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 def NeoCoreFXCall    : SDNode<"NeoCoreFXISD::CALL", SDT_SPCall,
                                [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                                 SDNPVariadic]>;
+def NeoCoreFXLA      : SDNode<"NeoCoreFXISD::LA", SDT_NeoCoreFXLA>;
 def CallSeqStart     : SDNode<"ISD::CALLSEQ_START", SDT_NeoCoreFXCallSeqStart,
                               [SDNPHasChain, SDNPOutGlue]>;
 def CallSeqEnd       : SDNode<"ISD::CALLSEQ_END", SDT_NeoCoreFXCallSeqEnd,
@@ -198,26 +203,33 @@ def : Pat<(i32 simm16:$imm), (ADDI R0, simm16:$imm)>;
 let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
 
 def LB  : InstI16<0x2, 0x0, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
-                  "lb\t$rd, $imm16($rs1)",
+                  "lb\t$rd, [$rs1 + $imm16]",
                   [(set GPR:$rd, (sextloadi8 (add GPR:$rs1, simm16:$imm16)))]>;
 
 def LBU : InstI16<0x2, 0x1, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
-                  "lbu\t$rd, $imm16($rs1)",
+                  "lbu\t$rd, [$rs1 + $imm16]",
                   [(set GPR:$rd, (zextloadi8 (add GPR:$rs1, simm16:$imm16)))]>;
 
 def LH  : InstI16<0x2, 0x2, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
-                  "lh\t$rd, $imm16($rs1)",
+                  "lh\t$rd, [$rs1 + $imm16]",
                   [(set GPR:$rd, (sextloadi16 (add GPR:$rs1, simm16:$imm16)))]>;
 
 def LHU : InstI16<0x2, 0x3, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
-                  "lhu\t$rd, $imm16($rs1)",
+                  "lhu\t$rd, [$rs1 + $imm16]",
                   [(set GPR:$rd, (zextloadi16 (add GPR:$rs1, simm16:$imm16)))]>;
 
 def LW  : InstI16<0x2, 0x4, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
-                  "lw\t$rd, $imm16($rs1)",
+                  "lw\t$rd, [$rs1 + $imm16]",
                   [(set GPR:$rd, (load (add GPR:$rs1, simm16:$imm16)))]>;
 
 } // mayLoad = 1
+
+// Zero-offset load patterns for pre-materialized addresses (e.g. LA pseudo).
+def : Pat<(sextloadi8 GPR:$rs1), (LB GPR:$rs1, 0)>;
+def : Pat<(zextloadi8 GPR:$rs1), (LBU GPR:$rs1, 0)>;
+def : Pat<(sextloadi16 GPR:$rs1), (LH GPR:$rs1, 0)>;
+def : Pat<(zextloadi16 GPR:$rs1), (LHU GPR:$rs1, 0)>;
+def : Pat<(load GPR:$rs1), (LW GPR:$rs1, 0)>;
 
 //===----------------------------------------------------------------------===//
 // 4.6 Store — Class 0x3 (S16-split form)
@@ -226,18 +238,23 @@ def LW  : InstI16<0x2, 0x4, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
 let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
 
 def SB : InstS16<0x0, (outs), (ins GPR:$rs2, GPR:$rs1, simm16:$imm16),
-                 "sb\t$rs2, $imm16($rs1)",
+                 "sb\t$rs2, [$rs1 + $imm16]",
                  [(truncstorei8 GPR:$rs2, (add GPR:$rs1, simm16:$imm16))]>;
 
 def SH : InstS16<0x1, (outs), (ins GPR:$rs2, GPR:$rs1, simm16:$imm16),
-                 "sh\t$rs2, $imm16($rs1)",
+                 "sh\t$rs2, [$rs1 + $imm16]",
                  [(truncstorei16 GPR:$rs2, (add GPR:$rs1, simm16:$imm16))]>;
 
 def SW : InstS16<0x2, (outs), (ins GPR:$rs2, GPR:$rs1, simm16:$imm16),
-                 "sw\t$rs2, $imm16($rs1)",
+                 "sw\t$rs2, [$rs1 + $imm16]",
                  [(store GPR:$rs2, (add GPR:$rs1, simm16:$imm16))]>;
 
 } // mayStore = 1
+
+// Zero-offset store patterns for pre-materialized addresses (e.g. LA pseudo).
+def : Pat<(truncstorei8 GPR:$rs2, GPR:$rs1), (SB GPR:$rs2, GPR:$rs1, 0)>;
+def : Pat<(truncstorei16 GPR:$rs2, GPR:$rs1), (SH GPR:$rs2, GPR:$rs1, 0)>;
+def : Pat<(store GPR:$rs2, GPR:$rs1), (SW GPR:$rs2, GPR:$rs1, 0)>;
 
 //===----------------------------------------------------------------------===//
 // 4.7 Branch — Class 0x4 (B16-split form)
@@ -292,12 +309,25 @@ def LPC : InstJ20<0x2, (outs GPR:$rd), (ins brtarget20:$off20),
                   "lpc\t$rd, $off20", []>;
 
 // RET pseudo: JALR r0, r11, 0
-let isReturn = 1, isTerminator = 1, isBarrier = 1 in
+let isReturn = 1, isTerminator = 1, isBarrier = 1, Uses = [R11] in
 def RET : Pseudo<(outs), (ins), "ret", [(NeoCoreFXRet)]>;
 
 //===----------------------------------------------------------------------===//
 // Pseudo-instructions for code generation
 //===----------------------------------------------------------------------===//
+
+// Materialize a symbol address for assembly-only output.
+def LA : Pseudo<(outs GPR:$rd), (ins symaddr:$off20),
+                "la\t$rd, $off20",
+                [(set GPR:$rd, (NeoCoreFXLA tglobaladdr:$off20))]>;
+def : Pat<(NeoCoreFXLA texternalsym:$off20), (LA texternalsym:$off20)>;
+
+// Direct call pseudo for assembly-only output.
+let isCall = 1, Defs = [R11] in
+def CALL : Pseudo<(outs), (ins symaddr:$off20),
+                  "call\t$off20",
+                  [(NeoCoreFXCall tglobaladdr:$off20)]>;
+def : Pat<(NeoCoreFXCall texternalsym:$off20), (CALL texternalsym:$off20)>;
 
 // Materialize a 32-bit immediate
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
