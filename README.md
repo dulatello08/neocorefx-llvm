@@ -65,6 +65,22 @@ clang -O3 -S -emit-llvm tests/addg.c -o tests/addg.ll
 cat tests/addg.s
 ```
 
+One-command wrapper (same pipeline internally):
+
+```bash
+./ncfx-clang -O3 tests/addg.c -o tests/addg.s
+```
+
+`ncfx-clang` is intentionally clang-like for compile-to-assembly workflows:
+
+```bash
+# target flag is accepted (consumed by wrapper)
+./ncfx-clang --target=neocorefx -O3 -S tests/addg.c -o tests/addg.s
+
+# multiple inputs (writes one .s per input basename)
+./ncfx-clang -O2 foo.c bar.c
+```
+
 You can also try running the built-in example script:
 ```bash
 cd tests

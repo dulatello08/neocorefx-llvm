@@ -43,17 +43,20 @@ NeoCoreFXTargetLowering::NeoCoreFXTargetLowering(const TargetMachine &TM,
   setBooleanContents(ZeroOrOneBooleanContent);
 
   // Operations we need to expand (no hardware support)
+  setOperationAction(ISD::SELECT, MVT::i32, Custom);
   setOperationAction(ISD::BR_CC, MVT::i32, Expand);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Expand);
+  setOperationAction(ISD::BR_JT, MVT::Other, Expand);
+  setOperationAction(ISD::BRIND, MVT::Other, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
 
   // No divide/remainder in v0
-  setOperationAction(ISD::SDIV, MVT::i32, Expand);
-  setOperationAction(ISD::UDIV, MVT::i32, Expand);
-  setOperationAction(ISD::SREM, MVT::i32, Expand);
-  setOperationAction(ISD::UREM, MVT::i32, Expand);
+  setOperationAction(ISD::SDIV, MVT::i32, Custom);
+  setOperationAction(ISD::UDIV, MVT::i32, Custom);
+  setOperationAction(ISD::SREM, MVT::i32, Custom);
+  setOperationAction(ISD::UREM, MVT::i32, Custom);
   setOperationAction(ISD::SDIVREM, MVT::i32, Expand);
   setOperationAction(ISD::UDIVREM, MVT::i32, Expand);
 
@@ -78,6 +81,12 @@ NeoCoreFXTargetLowering::NeoCoreFXTargetLowering(const TargetMachine &TM,
 
   // Stack pointer register
   setStackPointerRegisterToSaveRestore(NeoCoreFX::R15);
+
+  // Generic DAG expansion can emit these libcalls for intrinsic lowering.
+  setLibcallImpl(RTLIB::MEMCPY, RTLIB::impl_memcpy);
+  setLibcallImpl(RTLIB::MEMMOVE, RTLIB::impl_memmove);
+  setLibcallImpl(RTLIB::MEMSET, RTLIB::impl_memset);
+
 }
 
 const char *NeoCoreFXTargetLowering::getTargetNodeName(unsigned Opcode) const {
@@ -93,6 +102,45 @@ const char *NeoCoreFXTargetLowering::getTargetNodeName(unsigned Opcode) const {
 SDValue NeoCoreFXTargetLowering::LowerOperation(SDValue Op,
                                                 SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
+  case ISD::SELECT: {
+    SDLoc DL(Op);
+    SDValue Cond = Op.getOperand(0);
+    SDValue TrueV = Op.getOperand(1);
+    SDValue FalseV = Op.getOperand(2);
+    EVT VT = Op.getValueType();
+
+    SDValue CondZero = DAG.getConstant(0, DL, Cond.getValueType());
+    SDValue CondNZ = DAG.getSetCC(DL, Cond.getValueType(), Cond, CondZero,
+                                  ISD::SETNE);
+    if (CondNZ.getValueType() != VT)
+      CondNZ = DAG.getZExtOrTrunc(CondNZ, DL, VT);
+
+    SDValue Zero = DAG.getConstant(0, DL, VT);
+    SDValue Mask = DAG.getNode(ISD::SUB, DL, VT, Zero, CondNZ);
+    SDValue Diff = DAG.getNode(ISD::XOR, DL, VT, TrueV, FalseV);
+    SDValue SelectBits = DAG.getNode(ISD::AND, DL, VT, Diff, Mask);
+    return DAG.getNode(ISD::XOR, DL, VT, FalseV, SelectBits);
+  }
+  case ISD::SDIV:
+  case ISD::UDIV:
+  case ISD::SREM:
+  case ISD::UREM: {
+    assert(Op.getValueType() == MVT::i32 && "Only i32 div/rem is expected");
+    SDLoc DL(Op);
+    SmallVector<SDValue, 2> Args = {Op.getOperand(0), Op.getOperand(1)};
+    MakeLibCallOptions CallOptions;
+    RTLIB::LibcallImpl Impl = RTLIB::Unsupported;
+    switch (Op.getOpcode()) {
+    case ISD::SDIV: Impl = RTLIB::impl___divsi3; break;
+    case ISD::UDIV: Impl = RTLIB::impl___udivsi3; break;
+    case ISD::SREM: Impl = RTLIB::impl___modsi3; break;
+    case ISD::UREM: Impl = RTLIB::impl___umodsi3; break;
+    default: llvm_unreachable("Unexpected div/rem opcode");
+    }
+    auto [Res, Chain] = makeLibCall(DAG, Impl, MVT::i32, Args, CallOptions, DL);
+    (void)Chain;
+    return Res;
+  }
   case ISD::GlobalAddress: {
     const GlobalAddressSDNode *GA = cast<GlobalAddressSDNode>(Op);
     SDLoc DL(Op);
@@ -201,9 +249,10 @@ SDValue NeoCoreFXTargetLowering::LowerCall(
   SmallVector<SDValue, 8> MemOpChains;
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
 
-  for (unsigned i = 0; i < ArgLocs.size(); ++i) {
-    CCValAssign &VA = ArgLocs[i];
-    SDValue Arg = CLI.OutVals[i];
+  for (const CCValAssign &VA : ArgLocs) {
+    assert(VA.getValNo() < CLI.OutVals.size() &&
+           "CC assignment refers to invalid outgoing value");
+    SDValue Arg = CLI.OutVals[VA.getValNo()];
 
     if (VA.getLocInfo() == CCValAssign::SExt)
       Arg = DAG.getNode(ISD::SIGN_EXTEND, DL, VA.getLocVT(), Arg);
@@ -226,7 +275,6 @@ SDValue NeoCoreFXTargetLowering::LowerCall(
 
   if (!MemOpChains.empty())
     Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
-
   SDValue Glue;
   for (const auto &[Reg, Value] : RegsToPass) {
     Chain = DAG.getCopyToReg(Chain, DL, Reg, Value, Glue);
@@ -234,10 +282,27 @@ SDValue NeoCoreFXTargetLowering::LowerCall(
   }
 
   SDValue Callee = CLI.Callee;
+  // External symbols/global addresses may already be custom-lowered as
+  //   add(la(symbol), 0). Recover the direct symbol form so CALL selection
+  // can keep using a direct call pseudo.
+  if (Callee.getOpcode() == ISD::ADD) {
+    SDValue LHS = Callee.getOperand(0);
+    SDValue RHS = Callee.getOperand(1);
+    if (LHS.getOpcode() == NeoCoreFXISD::LA && isa<ConstantSDNode>(RHS) &&
+        cast<ConstantSDNode>(RHS)->isZero())
+      Callee = LHS;
+  }
+  if (Callee.getOpcode() == NeoCoreFXISD::LA)
+    Callee = Callee.getOperand(0);
+
   if (const auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT, G->getOffset());
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT,
+                                        G->getOffset(), G->getTargetFlags());
   } else if (const auto *ES = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = DAG.getTargetExternalSymbol(ES->getSymbol(), PtrVT);
+    const char *Sym = ES->getSymbol();
+    if (!Sym)
+      report_fatal_error("NeoCoreFX external symbol call has null symbol");
+    Callee = DAG.getTargetExternalSymbol(Sym, PtrVT, ES->getTargetFlags());
   } else {
     report_fatal_error("NeoCoreFX only supports direct symbol calls");
   }
@@ -255,7 +320,6 @@ SDValue NeoCoreFXTargetLowering::LowerCall(
 
   if (Glue.getNode())
     Ops.push_back(Glue);
-
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   Chain = DAG.getNode(NeoCoreFXISD::CALL, DL, NodeTys, Ops);
   Glue = Chain.getValue(1);

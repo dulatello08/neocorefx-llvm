@@ -2,6 +2,7 @@
 set -e
 
 LLC="../build-llvm/bin/llc"
+WRAPPER="../ncfx-clang"
 
 if [ ! -f "$LLC" ]; then
     echo "Error: llc not found at $LLC."
@@ -9,14 +10,25 @@ if [ ! -f "$LLC" ]; then
     exit 1
 fi
 
-echo "Compiling test.ll -> test.s"
-$LLC -march=neocorefx test.ll -o test.s
+if [ ! -x "$WRAPPER" ]; then
+    echo "Error: wrapper not found or not executable at $WRAPPER."
+    echo "Please ensure ../ncfx-clang exists and has execute permissions."
+    exit 1
+fi
 
-echo "Success! Output assembly:"
+echo "Compiling addg.c -> addg.s (one command wrapper)"
+"$WRAPPER" -O3 addg.c -o addg.s
+
+echo "Success! Output assembly from C source:"
+cat addg.s
+
+echo ""
+echo "Compiling test.ll -> test.s (direct llc)"
+"$LLC" -march=neocorefx test.ll -o test.s
+echo "Success! Output assembly from LLVM IR:"
 cat test.s
 
 echo ""
-echo "Note: To compile C code like addg.c, run:"
+echo "Manual two-step equivalent:"
 echo "clang -O3 -S -emit-llvm addg.c -o addg.ll"
-echo "Then lower it with:"
 echo "$LLC -march=neocorefx addg.ll -o addg.s"

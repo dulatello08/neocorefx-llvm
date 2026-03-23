@@ -65,6 +65,24 @@ void NeoCoreFXDAGToDAGISel::Select(SDNode *N) {
     return;
   }
 
+  if (N->getOpcode() == ISD::Constant && N->getValueType(0) == MVT::i32) {
+    SDLoc DL(N);
+    const auto *CN = cast<ConstantSDNode>(N);
+    int64_t SVal = CN->getSExtValue();
+
+    if (isInt<16>(SVal)) {
+      SelectCode(N);
+      return;
+    }
+
+    SDNode *Res = CurDAG->getMachineNode(
+        NeoCoreFX::LI32, DL, MVT::i32,
+        CurDAG->getTargetConstant(static_cast<uint32_t>(CN->getZExtValue()), DL,
+                                  MVT::i32));
+    ReplaceNode(N, Res);
+    return;
+  }
+
   // Try auto-generated patterns first
   SelectCode(N);
 }

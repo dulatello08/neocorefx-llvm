@@ -193,6 +193,27 @@ def SRAI : InstI16<0x1, 0x7, (outs GPR:$rd), (ins GPR:$rs1, shamt5:$imm16),
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
+// Materialized setcc (i32 0/1) using compare instructions.
+def : Pat<(i32 (setlt  GPR:$rs1, GPR:$rs2)), (SLT  GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (setult GPR:$rs1, GPR:$rs2)), (SLTU GPR:$rs1, GPR:$rs2)>;
+def : Pat<(i32 (setgt  GPR:$rs1, GPR:$rs2)), (SLT  GPR:$rs2, GPR:$rs1)>;
+def : Pat<(i32 (setugt GPR:$rs1, GPR:$rs2)), (SLTU GPR:$rs2, GPR:$rs1)>;
+def : Pat<(i32 (setge  GPR:$rs1, GPR:$rs2)), (XORI (SLT  GPR:$rs1, GPR:$rs2), 1)>;
+def : Pat<(i32 (setuge GPR:$rs1, GPR:$rs2)), (XORI (SLTU GPR:$rs1, GPR:$rs2), 1)>;
+def : Pat<(i32 (setle  GPR:$rs1, GPR:$rs2)), (XORI (SLT  GPR:$rs2, GPR:$rs1), 1)>;
+def : Pat<(i32 (setule GPR:$rs1, GPR:$rs2)), (XORI (SLTU GPR:$rs2, GPR:$rs1), 1)>;
+
+// setne(x,y) == sltu(zero, xor(x,y))
+def : Pat<(i32 (setne GPR:$rs1, GPR:$rs2)),
+          (SLTU R0, (XOR GPR:$rs1, GPR:$rs2))>;
+// seteq(x,y) == setne(x,y) ^ 1
+def : Pat<(i32 (seteq GPR:$rs1, GPR:$rs2)),
+          (XORI (SLTU R0, (XOR GPR:$rs1, GPR:$rs2)), 1)>;
+
+// Zero-compare forms.
+def : Pat<(i32 (setne GPR:$rs1, 0)), (SLTU R0, GPR:$rs1)>;
+def : Pat<(i32 (seteq GPR:$rs1, 0)), (XORI (SLTU R0, GPR:$rs1), 1)>;
+
 // Patterns for constants
 def : Pat<(i32 simm16:$imm), (ADDI R0, simm16:$imm)>;
 
@@ -227,8 +248,10 @@ def LW  : InstI16<0x2, 0x4, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
 // Zero-offset load patterns for pre-materialized addresses (e.g. LA pseudo).
 def : Pat<(sextloadi8 GPR:$rs1), (LB GPR:$rs1, 0)>;
 def : Pat<(zextloadi8 GPR:$rs1), (LBU GPR:$rs1, 0)>;
+def : Pat<(extloadi8 GPR:$rs1), (LBU GPR:$rs1, 0)>;
 def : Pat<(sextloadi16 GPR:$rs1), (LH GPR:$rs1, 0)>;
 def : Pat<(zextloadi16 GPR:$rs1), (LHU GPR:$rs1, 0)>;
+def : Pat<(extloadi16 GPR:$rs1), (LHU GPR:$rs1, 0)>;
 def : Pat<(load GPR:$rs1), (LW GPR:$rs1, 0)>;
 
 //===----------------------------------------------------------------------===//
@@ -287,6 +310,20 @@ def BLTU : InstB16<0x4, (outs), (ins GPR:$rs1, GPR:$rs2, brtarget16:$off16),
                    [(brcond (i32 (setult GPR:$rs1, GPR:$rs2)), bb:$off16)]>;
 
 } // isBranch, isTerminator
+
+// Canonicalize greater-than branch conditions through existing BLT/BLTU.
+def : Pat<(brcond (i32 (setgt GPR:$rs1, GPR:$rs2)), bb:$off16),
+          (BLT GPR:$rs2, GPR:$rs1, bb:$off16)>;
+def : Pat<(brcond (i32 (setugt GPR:$rs1, GPR:$rs2)), bb:$off16),
+          (BLTU GPR:$rs2, GPR:$rs1, bb:$off16)>;
+def : Pat<(brcond (i32 (setge GPR:$rs1, GPR:$rs2)), bb:$off16),
+          (BE (SLT GPR:$rs1, GPR:$rs2), R0, bb:$off16)>;
+def : Pat<(brcond (i32 (setuge GPR:$rs1, GPR:$rs2)), bb:$off16),
+          (BE (SLTU GPR:$rs1, GPR:$rs2), R0, bb:$off16)>;
+def : Pat<(brcond (i32 (setle GPR:$rs1, GPR:$rs2)), bb:$off16),
+          (BE (SLT GPR:$rs2, GPR:$rs1), R0, bb:$off16)>;
+def : Pat<(brcond (i32 (setule GPR:$rs1, GPR:$rs2)), bb:$off16),
+          (BE (SLTU GPR:$rs2, GPR:$rs1), R0, bb:$off16)>;
 
 //===----------------------------------------------------------------------===//
 // 4.7 Jump/Call — Class 0x5

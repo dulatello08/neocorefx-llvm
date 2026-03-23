@@ -1,0 +1,242 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LLC_BIN="${LLC_BIN:-$ROOT_DIR/build-llvm/bin/llc}"
+CLANG_BIN="${CLANG_BIN:-clang}"
+
+usage() {
+  cat <<'EOF'
+Usage: ./ncfx-clang [clang options] <inputs...> [-o output.s] [--llc-arg <arg> ...]
+
+Clang-like NeoCoreFX driver that compiles to assembly by chaining:
+  clang -S -emit-llvm  ->  llc -march=neocorefx
+
+Examples:
+  ./ncfx-clang -O3 tests/addg.c -o tests/addg.s
+  ./ncfx-clang -O2 foo.c bar.c
+  ./ncfx-clang --target=neocorefx -O3 tests/addg.c -o tests/addg.s
+  ./ncfx-clang -Iinclude -DVALUE=7 src/main.c --llc-arg=-verify-machineinstrs
+
+Notes:
+  - Accepts --target=neocorefx / -target neocorefx (consumed by this wrapper).
+  - -E / dependency generation / explicit -emit-llvm are forwarded directly to clang.
+  - -c is not supported in this wrapper (use your external assembler after .s output).
+
+Environment overrides:
+  CLANG_BIN=/path/to/clang
+  LLC_BIN=/path/to/llc
+EOF
+}
+
+if [[ $# -eq 0 ]]; then
+  usage
+  exit 1
+fi
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+declare -a FORWARD_ARGS=()
+declare -a PIPE_COMMON_ARGS=()
+declare -a LLC_ARGS=()
+declare -a INPUT_FILES=()
+declare -a TMP_FILES=()
+OUT_FILE_SPEC=""
+HAS_E=0
+HAS_DEP=0
+HAS_EMIT_LLVM=0
+HAS_C=0
+HAS_S=0
+
+cleanup() {
+  local f
+  for f in "${TMP_FILES[@]:-}"; do
+    [[ -n "$f" && -f "$f" ]] && rm -f "$f"
+  done
+}
+trap cleanup EXIT
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -)
+      INPUT_FILES+=("$1")
+      FORWARD_ARGS+=("$1")
+      shift
+      ;;
+    -o)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: -o requires a value" >&2
+        exit 1
+      fi
+      OUT_FILE_SPEC="$2"
+      FORWARD_ARGS+=("$1" "$2")
+      shift 2
+      ;;
+    --llc-arg=*)
+      LLC_ARGS+=("${1#--llc-arg=}")
+      shift
+      ;;
+    --llc-arg)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: --llc-arg requires a value" >&2
+        exit 1
+      fi
+      LLC_ARGS+=("$2")
+      shift 2
+      ;;
+    --target=neocorefx|--target=neocore-fx|-target=neocorefx|-target=neocore-fx)
+      # Consumed by this wrapper; host clang typically does not know this triple.
+      shift
+      ;;
+    -target)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: -target requires a value" >&2
+        exit 1
+      fi
+      if [[ "$2" != "neocorefx" && "$2" != "neocore-fx" ]]; then
+        FORWARD_ARGS+=("$1" "$2")
+        PIPE_COMMON_ARGS+=("$1" "$2")
+      fi
+      shift 2
+      ;;
+    --target=*)
+      FORWARD_ARGS+=("$1")
+      PIPE_COMMON_ARGS+=("$1")
+      shift
+      ;;
+    -march=neocorefx|-march=neocore-fx)
+      # Already fixed by llc -march=neocorefx.
+      shift
+      ;;
+    -E)
+      HAS_E=1
+      FORWARD_ARGS+=("$1")
+      shift
+      ;;
+    -M|-MM|-MD|-MMD|-MG|-MP)
+      HAS_DEP=1
+      FORWARD_ARGS+=("$1")
+      PIPE_COMMON_ARGS+=("$1")
+      shift
+      ;;
+    -emit-llvm)
+      HAS_EMIT_LLVM=1
+      FORWARD_ARGS+=("$1")
+      shift
+      ;;
+    -c)
+      HAS_C=1
+      FORWARD_ARGS+=("$1")
+      shift
+      ;;
+    -S)
+      HAS_S=1
+      FORWARD_ARGS+=("$1")
+      shift
+      ;;
+    # Common options with a separate argument.
+    -x|-std|-MF|-MT|-MQ|-isystem|-iquote|-idirafter|-include|-imacros|-isysroot|-resource-dir|-B|-mllvm|-Xclang|-Xpreprocessor|-Xassembler|-Xlinker|--sysroot|--gcc-toolchain|-fprofile-sample-use|-fprofile-instr-use|-fpass-plugin|-fmodule-map-file)
+      if [[ $# -lt 2 ]]; then
+        echo "Error: $1 requires a value" >&2
+        exit 1
+      fi
+      FORWARD_ARGS+=("$1" "$2")
+      PIPE_COMMON_ARGS+=("$1" "$2")
+      shift 2
+      ;;
+    # Common joined forms.
+    -I*|-D*|-U*|-L*|-l*|-W*|-O*|-g*|-f*|-m*|-std=*|-MF*|-MT*|-MQ*|--sysroot=*|--gcc-toolchain=*|--rtlib=*|--stdlib=*|-isystem*|-iquote*|-idirafter*|-include*|-imacros*|-isysroot*|-resource-dir*|-B*)
+      FORWARD_ARGS+=("$1")
+      PIPE_COMMON_ARGS+=("$1")
+      shift
+      ;;
+    *)
+      if [[ "$1" == -* ]]; then
+        FORWARD_ARGS+=("$1")
+        PIPE_COMMON_ARGS+=("$1")
+      else
+        INPUT_FILES+=("$1")
+        FORWARD_ARGS+=("$1")
+      fi
+      shift
+      ;;
+  esac
+done
+
+if ! command -v "$CLANG_BIN" >/dev/null 2>&1; then
+  echo "Error: clang binary not found: $CLANG_BIN" >&2
+  exit 1
+fi
+
+if [[ "$HAS_E" -eq 1 || "$HAS_DEP" -eq 1 || "$HAS_EMIT_LLVM" -eq 1 || "${#INPUT_FILES[@]}" -eq 0 ]]; then
+  set +u
+  "$CLANG_BIN" "${FORWARD_ARGS[@]}"
+  set -u
+  exit $?
+fi
+
+if [[ ! -x "$LLC_BIN" ]]; then
+  echo "Error: llc not found or not executable: $LLC_BIN" >&2
+  echo "Build it first with ./build.sh or set LLC_BIN." >&2
+  exit 1
+fi
+
+if [[ "$HAS_C" -eq 1 ]]; then
+  echo "Error: -c is not supported by this wrapper." >&2
+  echo "Use this tool to emit .s, then run your external assembler." >&2
+  exit 1
+fi
+
+if [[ "${#INPUT_FILES[@]}" -gt 1 && -n "$OUT_FILE_SPEC" ]]; then
+  echo "Error: cannot specify -o with multiple input files when producing assembly." >&2
+  exit 1
+fi
+
+emit_one() {
+  local input="$1"
+  local output="$2"
+  local tmp_ll=""
+  local ll_input=""
+
+  if [[ "$input" == *.ll ]]; then
+    ll_input="$input"
+  else
+    tmp_ll="$(mktemp "${TMPDIR:-/tmp}/ncfx-clang.XXXXXX")"
+    TMP_FILES+=("$tmp_ll")
+    set +u
+    "$CLANG_BIN" "${PIPE_COMMON_ARGS[@]}" -S -emit-llvm "$input" -o "$tmp_ll"
+    set -u
+    ll_input="$tmp_ll"
+  fi
+
+  set +u
+  "$LLC_BIN" -march=neocorefx "${LLC_ARGS[@]}" "$ll_input" -o "$output"
+  set -u
+}
+
+if [[ "${#INPUT_FILES[@]}" -eq 1 ]]; then
+  INPUT="${INPUT_FILES[0]}"
+  if [[ "$INPUT" == "-" && -z "$OUT_FILE_SPEC" ]]; then
+    echo "Error: stdin input requires explicit -o <file> (or -o -)." >&2
+    exit 1
+  fi
+  if [[ -n "$OUT_FILE_SPEC" ]]; then
+    OUT="$OUT_FILE_SPEC"
+  else
+    BASE="$(basename "$INPUT")"
+    OUT="${BASE%.*}.s"
+  fi
+  emit_one "$INPUT" "$OUT"
+  [[ "$OUT" != "-" ]] && echo "Wrote NeoCoreFX assembly: $OUT"
+  exit 0
+fi
+
+for INPUT in "${INPUT_FILES[@]}"; do
+  BASE="$(basename "$INPUT")"
+  OUT="${BASE%.*}.s"
+  emit_one "$INPUT" "$OUT"
+  echo "Wrote NeoCoreFX assembly: $OUT"
+done
