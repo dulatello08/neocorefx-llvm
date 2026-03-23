@@ -246,8 +246,11 @@ def LW  : InstI16<0x2, 0x4, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
 } // mayLoad = 1
 
 // Zero-offset load patterns for pre-materialized addresses (e.g. LA pseudo).
+def : Pat<(zextloadi1 (add GPR:$rs1, simm16:$imm16)),
+          (LBU GPR:$rs1, simm16:$imm16)>;
 def : Pat<(sextloadi8 GPR:$rs1), (LB GPR:$rs1, 0)>;
 def : Pat<(zextloadi8 GPR:$rs1), (LBU GPR:$rs1, 0)>;
+def : Pat<(zextloadi1 GPR:$rs1), (LBU GPR:$rs1, 0)>;
 def : Pat<(extloadi8 GPR:$rs1), (LBU GPR:$rs1, 0)>;
 def : Pat<(sextloadi16 GPR:$rs1), (LH GPR:$rs1, 0)>;
 def : Pat<(zextloadi16 GPR:$rs1), (LHU GPR:$rs1, 0)>;
@@ -324,6 +327,11 @@ def : Pat<(brcond (i32 (setle GPR:$rs1, GPR:$rs2)), bb:$off16),
           (BE (SLT GPR:$rs2, GPR:$rs1), R0, bb:$off16)>;
 def : Pat<(brcond (i32 (setule GPR:$rs1, GPR:$rs2)), bb:$off16),
           (BE (SLTU GPR:$rs2, GPR:$rs1), R0, bb:$off16)>;
+
+// Generic boolean branch: any non-zero i32 condition is true.
+// This covers optimized forms like `brcond (zextload i1 ...)`.
+def : Pat<(brcond GPR:$rs1, bb:$off16),
+          (BNE GPR:$rs1, R0, bb:$off16)>;
 
 //===----------------------------------------------------------------------===//
 // 4.7 Jump/Call — Class 0x5

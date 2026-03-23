@@ -14,6 +14,7 @@ tests/*.ll
 tests/*.s
 !tests/test.ll
 !tests/test.s
+!tests/runtime_bool_brcond.ll
 
 # IDEs
 .idea/
