@@ -87,6 +87,16 @@ NeoCoreFXTargetLowering::NeoCoreFXTargetLowering(const TargetMachine &TM,
   setLibcallImpl(RTLIB::MEMMOVE, RTLIB::impl_memmove);
   setLibcallImpl(RTLIB::MEMSET, RTLIB::impl_memset);
 
+  // Prefer inline lowering for small fixed-size memory intrinsics so hot
+  // struct copies (e.g. Dhrystone's Rec_Type assignment) do not devolve into
+  // out-of-line byte loops through runtime memcpy/memmove/memset.
+  MaxStoresPerMemcpy = 16;
+  MaxStoresPerMemcpyOptSize = 8;
+  MaxStoresPerMemmove = 16;
+  MaxStoresPerMemmoveOptSize = 8;
+  MaxStoresPerMemset = 16;
+  MaxStoresPerMemsetOptSize = 8;
+
 }
 
 const char *NeoCoreFXTargetLowering::getTargetNodeName(unsigned Opcode) const {

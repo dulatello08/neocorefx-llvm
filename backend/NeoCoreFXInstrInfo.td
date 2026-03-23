@@ -79,7 +79,7 @@ def CallSeqEnd       : SDNode<"ISD::CALLSEQ_END", SDT_NeoCoreFXCallSeqEnd,
 // 4.1 Integer ALU (Register) — Class 0x0
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Itinerary = IIC_ALU in {
 
 // NOP is the all-zeros word (class=0, op=0, everything=0)
 let isBarrier = 0, isCodeGenOnly = 0 in
@@ -133,6 +133,7 @@ def SRA  : InstR3<0xA, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
 // 4.4 Multiply — Class 0x0 (ops 0xB..0xE)
 //===----------------------------------------------------------------------===//
 
+let Itinerary = IIC_MUL in {
 def MUL    : InstR3<0xB, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     "mul\t$rd, $rs1, $rs2",
                     [(set GPR:$rd, (mul GPR:$rs1, GPR:$rs2))]>;
@@ -147,6 +148,7 @@ def MULHU  : InstR3<0xD, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
 
 def MULHSU : InstR3<0xE, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                     "mulhsu\t$rd, $rs1, $rs2", []>;
+}
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -154,7 +156,7 @@ def MULHSU : InstR3<0xE, (outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
 // 4.2 Integer ALU (Immediate) — Class 0x1
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Itinerary = IIC_ALU in {
 
 def ADDI : InstI16<0x1, 0x0, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
                    "addi\t$rd, $rs1, $imm16",
@@ -221,7 +223,7 @@ def : Pat<(i32 simm16:$imm), (ADDI R0, simm16:$imm)>;
 // 4.5 Load — Class 0x2
 //===----------------------------------------------------------------------===//
 
-let mayLoad = 1, mayStore = 0, hasSideEffects = 0 in {
+let mayLoad = 1, mayStore = 0, hasSideEffects = 0, Itinerary = IIC_LD in {
 
 def LB  : InstI16<0x2, 0x0, (outs GPR:$rd), (ins GPR:$rs1, simm16:$imm16),
                   "lb\t$rd, [$rs1 + $imm16]",
@@ -261,7 +263,7 @@ def : Pat<(load GPR:$rs1), (LW GPR:$rs1, 0)>;
 // 4.6 Store — Class 0x3 (S16-split form)
 //===----------------------------------------------------------------------===//
 
-let mayLoad = 0, mayStore = 1, hasSideEffects = 0 in {
+let mayLoad = 0, mayStore = 1, hasSideEffects = 0, Itinerary = IIC_ST in {
 
 def SB : InstS16<0x0, (outs), (ins GPR:$rs2, GPR:$rs1, simm16:$imm16),
                  "sb\t$rs2, [$rs1 + $imm16]",
@@ -286,7 +288,7 @@ def : Pat<(store GPR:$rs2, GPR:$rs1), (SW GPR:$rs2, GPR:$rs1, 0)>;
 // 4.7 Branch — Class 0x4 (B16-split form)
 //===----------------------------------------------------------------------===//
 
-let isBarrier = 1, isBranch = 1, isTerminator = 1 in
+let isBarrier = 1, isBranch = 1, isTerminator = 1, Itinerary = IIC_ALU in
 def B   : InstB16<0x0, (outs), (ins brtarget16:$off16),
                   "b\t$off16",
                   [(br bb:$off16)]> {
@@ -294,7 +296,7 @@ def B   : InstB16<0x0, (outs), (ins brtarget16:$off16),
   let rs2 = 0;
 }
 
-let isBranch = 1, isTerminator = 1 in {
+let isBranch = 1, isTerminator = 1, Itinerary = IIC_ALU in {
 
 def BE  : InstB16<0x1, (outs), (ins GPR:$rs1, GPR:$rs2, brtarget16:$off16),
                   "be\t$rs1, $rs2, $off16",
@@ -337,19 +339,19 @@ def : Pat<(brcond GPR:$rs1, bb:$off16),
 // 4.7 Jump/Call — Class 0x5
 //===----------------------------------------------------------------------===//
 
-let isCall = 1 in
+let isCall = 1, Itinerary = IIC_ALU in
 def JAL : InstJ20<0x0, (outs GPR:$rd), (ins brtarget20:$off20),
                   "jal\t$rd, $off20", []> {
   let Defs = [R11];
 }
 
-let isCall = 1 in
+let isCall = 1, Itinerary = IIC_ALU in
 def JALR : InstJR16<(outs GPR:$rd), (ins GPR:$rs1, simm16:$off16),
                     "jalr\t$rd, $rs1, $off16", []> {
   let isIndirectBranch = 1;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Itinerary = IIC_ALU in
 def LPC : InstJ20<0x2, (outs GPR:$rd), (ins brtarget20:$off20),
                   "lpc\t$rd, $off20", []>;
 
