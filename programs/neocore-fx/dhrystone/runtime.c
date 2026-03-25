@@ -248,25 +248,26 @@ char *strcpy(char *dst, const char *src)
 {
     char *out = dst;
 
-    while (*src != '\0') {
-        *dst++ = *src++;
+    while ((*dst++ = *src++) != '\0') {
     }
-    *dst = '\0';
 
     return out;
 }
 
 int strcmp(const char *a, const char *b)
 {
-    while (*a != '\0' && *b != '\0') {
-        if (*a != *b) {
-            return (int)((unsigned char)*a) - (int)((unsigned char)*b);
-        }
-        a++;
-        b++;
-    }
+    unsigned char ca;
+    unsigned char cb;
 
-    return (int)((unsigned char)*a) - (int)((unsigned char)*b);
+    do {
+        ca = (unsigned char)*a++;
+        cb = (unsigned char)*b++;
+        if (ca != cb) {
+            return (int)ca - (int)cb;
+        }
+    } while (ca != '\0');
+
+    return 0;
 }
 
 void *memset(void *dst, int c, unsigned int n)

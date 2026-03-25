@@ -19,15 +19,14 @@ main:                                   ; @main
 	sw	r2, [r9 + #0]
 	addi	r2, r8, #0
 	jal	r11, malloc
-	la	r4, Ptr_Glob
-	sw	r4, [r15 + #56]
-	sw	r2, [r4 + #0]
-	sw	r9, [r15 + #8]
+	la	r10, Ptr_Glob
+	sw	r2, [r10 + #0]
+	sw	r9, [r15 + #4]
 	lw	r3, [r9 + #0]
 	sw	r3, [r2 + #0]
-	lw	r2, [r4 + #0]
-	addi	r10, r0, #0
-	sw	r10, [r2 + #4]
+	lw	r2, [r10 + #0]
+	addi	r9, r0, #0
+	sw	r9, [r2 + #4]
 	addi	r3, r0, #2
 	sw	r3, [r2 + #8]
 	addi	r3, r0, #40
@@ -39,14 +38,14 @@ main:                                   ; @main
 	la	r3, .L.str.1
 	jal	r11, strcpy
 	la	r2, Arr_2_Glob
-	addi	r8, r0, #10
-	sw	r8, [r2 + #1628]
-	la	r9, .L.str.2
-	addi	r2, r9, #0
+	addi	r3, r0, #10
+	sw	r3, [r2 + #1628]
+	la	r8, .L.str.2
+	addi	r2, r8, #0
 	jal	r11, printf
 	la	r2, .L.str.3
 	jal	r11, printf
-	addi	r2, r9, #0
+	addi	r2, r8, #0
 	jal	r11, printf
 	la	r2, .L.str.4
 	la	r3, .L.str.5
@@ -55,57 +54,60 @@ main:                                   ; @main
 	lw	r4, [r4 + #0]
 	sltu	r4, r0, r4
 	xori	r4, r4, #1
-	sub	r4, r10, r4
+	sub	r4, r9, r4
 	and	r3, r3, r4
 	xor	r2, r3, r2
 	jal	r11, printf
-	addi	r2, r9, #0
+	addi	r2, r8, #0
 	jal	r11, printf
 	la	r2, .L.str.6
-	addi	r3, r8, #0
+	addi	r3, r0, #2000
 	jal	r11, printf
-	sw	r10, [r15 + #44]
-	addi	r2, r10, #0
+	sw	r9, [r15 + #44]
+	addi	r2, r9, #0
 	jal	r11, time
 	la	r3, Begin_Time
 	sw	r2, [r3 + #0]
-	addi	r9, r0, #1
+	addi	r8, r0, #1
 	la	r2, Bool_Glob
 	sw	r2, [r15 + #48]
 	la	r2, Ch_1_Glob
-	sw	r2, [r15 + #32]
+	sw	r2, [r15 + #40]
 	addi	r2, r0, #65
 	sw	r2, [r15 + #52]
 	la	r2, Ch_2_Glob
 	sw	r2, [r15 + #72]
 	addi	r2, r0, #66
 	sw	r2, [r15 + #16]
-	sw	r9, [r15 + #20]
+	addi	r2, r15, #78
+	sw	r2, [r15 + #12]
+	sw	r8, [r15 + #20]
+	sw	r10, [r15 + #56]
 L_BB0_1:                                ; =>This Loop Header: Depth=1
                                         ;     Child Loop BB0_6 Depth 2
 	lw	r2, [r15 + #48]
-	lw	r10, [r15 + #20]
-	sw	r10, [r2 + #0]
-	lw	r2, [r15 + #32]
+	lw	r9, [r15 + #20]
+	sw	r9, [r2 + #0]
+	lw	r2, [r15 + #40]
 	lw	r3, [r15 + #52]
 	sb	r3, [r2 + #0]
 	lw	r2, [r15 + #72]
 	lw	r3, [r15 + #16]
 	sb	r3, [r2 + #0]
-	addi	r8, r15, #78
 	la	r3, .L.str.7
-	addi	r2, r8, #0
+	lw	r10, [r15 + #12]
+	addi	r2, r10, #0
 	jal	r11, strcpy
 	addi	r2, r15, #140
 	sw	r2, [r15 + #68]
-	sw	r10, [r2 + #0]
+	sw	r9, [r2 + #0]
 	addi	r2, r15, #109
-	addi	r3, r8, #0
+	addi	r3, r10, #0
 	jal	r11, Func_2
-	addi	r8, r15, #144
+	addi	r9, r15, #144
 	addi	r3, r0, #7
-	sw	r3, [r15 + #40]
-	sw	r3, [r8 + #0]
+	sw	r3, [r15 + #36]
+	sw	r3, [r9 + #0]
 	sltu	r2, r0, r2
 	xori	r2, r2, #1
 	lw	r3, [r15 + #48]
@@ -113,10 +115,10 @@ L_BB0_1:                                ; =>This Loop Header: Depth=1
 	addi	r2, r0, #2
 	addi	r10, r0, #3
 	addi	r3, r10, #0
-	addi	r4, r8, #0
+	addi	r4, r9, #0
 	jal	r11, Proc_7
-	sw	r8, [r15 + #36]
-	lw	r5, [r8 + #0]
+	sw	r9, [r15 + #32]
+	lw	r5, [r9 + #0]
 	la	r2, Arr_1_Glob
 	la	r3, Arr_2_Glob
 	sw	r2, [r15 + #24]
@@ -126,38 +128,38 @@ L_BB0_1:                                ; =>This Loop Header: Depth=1
 	jal	r11, Proc_8
 	lw	r4, [r15 + #56]
 	lw	r10, [r4 + #0]
-	lw	r8, [r10 + #0]
+	lw	r9, [r10 + #0]
 	lw	r2, [r10 + #44]
-	sw	r2, [r8 + #44]
+	sw	r2, [r9 + #44]
 	lw	r2, [r10 + #40]
-	sw	r2, [r8 + #40]
+	sw	r2, [r9 + #40]
 	lw	r2, [r10 + #36]
-	sw	r2, [r8 + #36]
+	sw	r2, [r9 + #36]
 	lw	r2, [r10 + #32]
-	sw	r2, [r8 + #32]
+	sw	r2, [r9 + #32]
 	lw	r2, [r10 + #28]
-	sw	r2, [r8 + #28]
+	sw	r2, [r9 + #28]
 	lw	r2, [r10 + #24]
-	sw	r2, [r8 + #24]
+	sw	r2, [r9 + #24]
 	lw	r2, [r10 + #20]
-	sw	r2, [r8 + #20]
+	sw	r2, [r9 + #20]
 	lw	r2, [r10 + #16]
-	sw	r2, [r8 + #16]
+	sw	r2, [r9 + #16]
 	lw	r2, [r10 + #12]
-	sw	r2, [r8 + #12]
+	sw	r2, [r9 + #12]
 	lw	r2, [r10 + #8]
-	sw	r2, [r8 + #8]
+	sw	r2, [r9 + #8]
 	lw	r2, [r10 + #4]
-	sw	r2, [r8 + #4]
-	sw	r8, [r8 + #0]
+	sw	r2, [r9 + #4]
+	sw	r9, [r9 + #0]
 	addi	r2, r0, #5
 	sw	r2, [r10 + #12]
-	sw	r2, [r8 + #12]
+	sw	r2, [r9 + #12]
 	lw	r2, [r10 + #0]
-	sw	r2, [r8 + #0]
+	sw	r2, [r9 + #0]
 	lw	r2, [r4 + #0]
 	lw	r2, [r2 + #0]
-	sw	r2, [r8 + #0]
+	sw	r2, [r9 + #0]
 	la	r2, Int_Glob
 	sw	r2, [r15 + #60]
 	lw	r3, [r2 + #0]
@@ -165,7 +167,7 @@ L_BB0_1:                                ; =>This Loop Header: Depth=1
 	addi	r4, r2, #12
 	addi	r2, r0, #10
 	jal	r11, Proc_7
-	lw	r2, [r8 + #4]
+	lw	r2, [r9 + #4]
 	lw	r3, [r15 + #44]
 	bne	r2, r3, L_BB0_3
 	b	L_BB0_2
@@ -195,13 +197,13 @@ L_BB0_3:                                ;   in Loop: Header=BB0_1 Depth=1
 	sw	r3, [r10 + #44]
 	lw	r2, [r2 + #0]
 	sw	r2, [r10 + #0]
-	lw	r4, [r15 + #56]
+	lw	r10, [r15 + #56]
 L_BB0_4:                                ;   in Loop: Header=BB0_1 Depth=1
 	lw	r2, [r15 + #72]
 	lb	r2, [r2 + #0]
 	addi	r3, r0, #9
-	lw	r5, [r15 + #52]
-	blt	r2, r5, L_BB0_10
+	lw	r4, [r15 + #52]
+	blt	r2, r4, L_BB0_10
 	b	L_BB0_5
 L_BB0_5:                                ; %.preheader
                                         ;   in Loop: Header=BB0_1 Depth=1
@@ -210,8 +212,8 @@ L_BB0_6:                                ;   Parent Loop BB0_1 Depth=1
                                         ; =>  This Inner Loop Header: Depth=2
 	lw	r3, [r15 + #68]
 	lw	r10, [r3 + #0]
-	slli	r8, r2, #24
-	srai	r2, r8, #24
+	slli	r9, r2, #24
+	srai	r2, r9, #24
 	addi	r3, r0, #67
 	jal	r11, Func_1
 	bne	r10, r2, L_BB0_8
@@ -224,11 +226,11 @@ L_BB0_7:                                ;   in Loop: Header=BB0_6 Depth=2
 	la	r3, .L.str.8
 	jal	r11, strcpy
 	lw	r2, [r15 + #60]
-	sw	r9, [r2 + #0]
-	sw	r9, [r15 + #64]
+	sw	r8, [r2 + #0]
+	sw	r8, [r15 + #64]
 L_BB0_8:                                ;   in Loop: Header=BB0_6 Depth=2
 	li	r2, #16777216
-	add	r2, r8, r2
+	add	r2, r9, r2
 	srai	r2, r2, #24
 	lw	r3, [r15 + #72]
 	lb	r3, [r3 + #0]
@@ -239,39 +241,39 @@ L_BB0_9:                                ;   in Loop: Header=BB0_1 Depth=1
 	addi	r2, r0, #3
 	lw	r3, [r15 + #64]
 	mul	r3, r3, r2
-	lw	r4, [r15 + #56]
+	lw	r10, [r15 + #56]
 L_BB0_10:                               ;   in Loop: Header=BB0_1 Depth=1
-	addi	r9, r9, #1
-	addi	r2, r0, #11
-	bne	r9, r2, L_BB0_1
+	addi	r8, r8, #1
+	addi	r2, r0, #2001
+	bne	r8, r2, L_BB0_1
 	b	L_BB0_11
 L_BB0_2:                                ;   in Loop: Header=BB0_1 Depth=1
-	addi	r2, r8, #12
-	sw	r2, [r15 + #12]
+	addi	r2, r9, #12
+	sw	r2, [r15 + #8]
 	addi	r2, r0, #6
-	sw	r2, [r8 + #12]
+	sw	r2, [r9 + #12]
 	lw	r2, [r10 + #8]
-	addi	r3, r8, #8
+	addi	r3, r9, #8
 	jal	r11, Proc_6
 	lw	r10, [r15 + #56]
 	lw	r2, [r10 + #0]
 	lw	r2, [r2 + #0]
-	sw	r2, [r8 + #0]
-	lw	r2, [r8 + #12]
+	sw	r2, [r9 + #0]
+	lw	r2, [r9 + #12]
 	addi	r3, r0, #10
-	lw	r4, [r15 + #12]
+	lw	r4, [r15 + #8]
 	jal	r11, Proc_7
 	b	L_BB0_4
 L_BB0_11:
-	lw	r9, [r15 + #32]
-	lbu	r2, [r9 + #0]
+	lw	r2, [r15 + #40]
+	lbu	r2, [r2 + #0]
+	sw	r2, [r15 + #20]
+	lw	r9, [r15 + #60]
+	lw	r2, [r9 + #0]
 	sw	r2, [r15 + #16]
-	lw	r10, [r15 + #60]
-	lw	r2, [r10 + #0]
-	sw	r2, [r15 + #12]
-	lw	r2, [r15 + #36]
+	lw	r2, [r15 + #32]
 	lw	r2, [r2 + #0]
-	sw	r2, [r15 + #4]
+	sw	r2, [r15 + #12]
 	lw	r2, [r15 + #44]
 	sw	r3, [r15 + #64]
 	jal	r11, time
@@ -280,20 +282,20 @@ L_BB0_11:
 	la	r2, .L.str.9
 	jal	r11, printf
 	la	r8, .L.str.2
-	sw	r8, [r15 + #20]
+	sw	r8, [r15 + #52]
 	addi	r2, r8, #0
 	jal	r11, printf
 	la	r2, .L.str.10
 	jal	r11, printf
 	addi	r2, r8, #0
 	jal	r11, printf
-	lw	r3, [r10 + #0]
+	lw	r3, [r9 + #0]
 	la	r2, .L.str.11
 	jal	r11, printf
-	la	r10, .L.str.12
+	la	r8, .L.str.12
 	addi	r3, r0, #5
-	sw	r3, [r15 + #0]
-	addi	r2, r10, #0
+	sw	r3, [r15 + #8]
+	addi	r2, r8, #0
 	jal	r11, printf
 	lw	r2, [r15 + #48]
 	lw	r3, [r2 + #0]
@@ -301,9 +303,11 @@ L_BB0_11:
 	jal	r11, printf
 	addi	r3, r0, #1
 	sw	r3, [r15 + #60]
-	addi	r2, r10, #0
+	addi	r2, r8, #0
+	addi	r9, r8, #0
 	jal	r11, printf
-	lb	r3, [r9 + #0]
+	lw	r2, [r15 + #40]
+	lb	r3, [r2 + #0]
 	la	r2, .L.str.14
 	jal	r11, printf
 	la	r8, .L.str.15
@@ -322,9 +326,9 @@ L_BB0_11:
 	lw	r3, [r2 + #32]
 	la	r2, .L.str.17
 	jal	r11, printf
-	sw	r10, [r15 + #52]
-	addi	r2, r10, #0
-	lw	r3, [r15 + #40]
+	addi	r8, r9, #0
+	addi	r2, r8, #0
+	lw	r3, [r15 + #36]
 	jal	r11, printf
 	lw	r2, [r15 + #28]
 	lw	r3, [r2 + #1628]
@@ -334,94 +338,93 @@ L_BB0_11:
 	jal	r11, printf
 	la	r2, .L.str.20
 	jal	r11, printf
-	lw	r8, [r15 + #56]
-	lw	r2, [r8 + #0]
+	lw	r2, [r10 + #0]
 	lw	r3, [r2 + #0]
 	la	r2, .L.str.21
 	sw	r2, [r15 + #72]
 	jal	r11, printf
 	la	r2, .L.str.22
 	jal	r11, printf
-	lw	r2, [r8 + #0]
+	lw	r2, [r10 + #0]
 	lw	r3, [r2 + #4]
 	la	r2, .L.str.23
-	sw	r2, [r15 + #32]
+	sw	r2, [r15 + #40]
 	jal	r11, printf
-	addi	r2, r10, #0
+	addi	r2, r8, #0
 	lw	r3, [r15 + #44]
 	jal	r11, printf
-	lw	r2, [r8 + #0]
+	lw	r2, [r10 + #0]
 	lw	r3, [r2 + #8]
 	la	r2, .L.str.24
 	sw	r2, [r15 + #28]
 	jal	r11, printf
 	addi	r3, r0, #2
-	addi	r2, r10, #0
+	addi	r2, r8, #0
 	jal	r11, printf
-	lw	r2, [r8 + #0]
+	lw	r2, [r10 + #0]
 	lw	r3, [r2 + #12]
 	la	r2, .L.str.25
 	sw	r2, [r15 + #24]
 	jal	r11, printf
 	addi	r3, r0, #17
-	addi	r2, r10, #0
+	addi	r2, r8, #0
 	jal	r11, printf
-	lw	r2, [r8 + #0]
+	lw	r2, [r10 + #0]
 	addi	r3, r2, #16
 	la	r2, .L.str.26
 	sw	r2, [r15 + #56]
 	jal	r11, printf
-	la	r9, .L.str.27
-	addi	r2, r9, #0
+	la	r2, .L.str.27
+	sw	r2, [r15 + #0]
 	jal	r11, printf
 	la	r2, .L.str.28
 	jal	r11, printf
-	lw	r10, [r15 + #8]
-	lw	r2, [r10 + #0]
+	lw	r9, [r15 + #4]
+	lw	r2, [r9 + #0]
 	lw	r3, [r2 + #0]
 	lw	r2, [r15 + #72]
 	jal	r11, printf
 	la	r2, .L.str.29
 	jal	r11, printf
-	lw	r2, [r10 + #0]
+	lw	r2, [r9 + #0]
 	lw	r3, [r2 + #4]
-	lw	r2, [r15 + #32]
+	lw	r2, [r15 + #40]
 	jal	r11, printf
-	lw	r8, [r15 + #52]
-	addi	r2, r8, #0
+	addi	r10, r8, #0
+	addi	r2, r10, #0
 	lw	r3, [r15 + #44]
 	jal	r11, printf
-	lw	r2, [r10 + #0]
+	lw	r2, [r9 + #0]
 	lw	r3, [r2 + #8]
 	lw	r2, [r15 + #28]
 	jal	r11, printf
-	addi	r2, r8, #0
+	addi	r2, r10, #0
 	lw	r3, [r15 + #60]
 	jal	r11, printf
-	lw	r2, [r10 + #0]
+	lw	r2, [r9 + #0]
 	lw	r3, [r2 + #12]
 	lw	r2, [r15 + #24]
 	jal	r11, printf
 	addi	r3, r0, #18
-	addi	r2, r8, #0
+	addi	r2, r10, #0
 	jal	r11, printf
-	lw	r2, [r10 + #0]
+	lw	r2, [r9 + #0]
 	addi	r3, r2, #16
 	lw	r2, [r15 + #56]
 	jal	r11, printf
-	addi	r2, r9, #0
+	lw	r2, [r15 + #0]
 	jal	r11, printf
 	lw	r2, [r15 + #64]
 	lw	r2, [r15 + #64]
-	lw	r9, [r15 + #4]
+	lw	r9, [r15 + #12]
 	addi	r3, r9, #0
 	call	__divsi3
 	addi	r8, r2, #0
-	lw	r2, [r15 + #12]
+	lw	r2, [r15 + #16]
 	sub	r2, r8, r2
 	addi	r2, r2, #9
 	xor	r2, r2, r8
-	lw	r3, [r15 + #16]
+	lw	r3, [r15 + #20]
 	lw	r4, [r15 + #48]
 	xor	r3, r3, r4
 	sltu	r3, r0, r3
@@ -432,13 +435,12 @@ L_BB0_11:
 	xor	r3, r8, r2
 	la	r2, .L.str.30
 	jal	r11, printf
-	lw	r10, [r15 + #52]
 	addi	r2, r10, #0
-	lw	r3, [r15 + #0]
+	lw	r3, [r15 + #8]
 	jal	r11, printf
 	lw	r2, [r15 + #64]
 	sub	r2, r2, r9
-	lw	r9, [r15 + #40]
+	lw	r9, [r15 + #36]
 	mul	r2, r2, r9
 	sub	r3, r2, r8
 	la	r2, .L.str.31
@@ -446,7 +448,7 @@ L_BB0_11:
 	addi	r3, r0, #13
 	addi	r2, r10, #0
 	jal	r11, printf
-	lw	r2, [r15 + #36]
+	lw	r2, [r15 + #32]
 	lw	r3, [r2 + #0]
 	la	r2, .L.str.32
 	jal	r11, printf
@@ -470,7 +472,7 @@ L_BB0_11:
 	jal	r11, printf
 	la	r2, .L.str.37
 	jal	r11, printf
-	lw	r8, [r15 + #20]
+	lw	r8, [r15 + #52]
 	addi	r2, r8, #0
 	jal	r11, printf
 	la	r2, .L.str.38
