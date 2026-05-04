@@ -22,5 +22,5 @@ tests/*.s
 *.swp
 
 # Programs
-*/*.o
-*/*.bin
+**/*.o
+**/*.bin

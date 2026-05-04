@@ -17,6 +17,7 @@ class NeoCoreFXTargetMachine;
 class PassRegistry;
 
 FunctionPass *createNeoCoreFXISelDag(NeoCoreFXTargetMachine &TM);
+FunctionPass *createNeoCoreFXPostRATuningPass();
 
 void initializeNeoCoreFXDAGToDAGISelLegacyPass(PassRegistry &);
 

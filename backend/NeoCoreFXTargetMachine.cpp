@@ -97,12 +97,19 @@ public:
   }
 
   bool addInstSelector() override;
+  void addPreEmitPass() override;
 };
 } // namespace
 
 bool NeoCoreFXPassConfig::addInstSelector() {
   addPass(createNeoCoreFXISelDag(getNeoCoreFXTargetMachine()));
   return false;
+}
+
+void NeoCoreFXPassConfig::addPreEmitPass() {
+  TargetPassConfig::addPreEmitPass();
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addPass(createNeoCoreFXPostRATuningPass());
 }
 
 TargetPassConfig *

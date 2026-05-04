@@ -27,7 +27,7 @@ def NeoCoreFXSchedModel : SchedMachineModel {
   let CompleteModel = 0;
   let IssueWidth = 1;
   let MispredictPenalty = 4;  // ~4 cycles for branch mispredict in 6-stage pipe
-  let PostRAScheduler = 0;
+  let PostRAScheduler = 1;
   let MicroOpBufferSize = 0;
   let Itineraries = NeoCoreFXItinerary;
 }

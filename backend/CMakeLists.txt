@@ -18,6 +18,7 @@ add_llvm_target(NeoCoreFXCodeGen
   NeoCoreFXInstrInfo.cpp
   NeoCoreFXISelDAGToDAG.cpp
   NeoCoreFXISelLowering.cpp
+  NeoCoreFXPostRATuning.cpp
   NeoCoreFXRegisterInfo.cpp
   NeoCoreFXSubtarget.cpp
   NeoCoreFXTargetMachine.cpp
