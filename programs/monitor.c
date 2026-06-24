@@ -1,55 +1,20 @@
 #include <stdint.h>
 
-/* uart regs */
-enum {
-  UART_TXDATA_OFF = 0x00u,
-  UART_RXDATA_OFF = 0x04u,
-  UART_STATUS_OFF = 0x08u,
-  UART_CTRL_OFF = 0x0Cu,
-  UART_BAUDDIV_OFF = 0x10u
-};
-
-enum {
-  UART_STATUS_TX_READY = (1u << 0),
-  UART_STATUS_RX_VALID = (1u << 1),
-  UART_STATUS_TX_OVERRUN = (1u << 2),
-  UART_STATUS_RX_OVERRUN = (1u << 3),
-  UART_CTRL_TX_EN = (1u << 0),
-  UART_CTRL_RX_EN = (1u << 1)
-};
-
-static volatile uint32_t *mmio(unsigned int off) {
-  unsigned int base = 1u;
-  base <<= 30; /* 0x40000000 */
-  return (volatile uint32_t *)(uintptr_t)(base + off);
-}
-
-static void uart_init(void) {
-  *mmio(UART_CTRL_OFF) = UART_CTRL_TX_EN | UART_CTRL_RX_EN;
-  *mmio(UART_BAUDDIV_OFF) = 346u;
-  *mmio(UART_STATUS_OFF) = UART_STATUS_TX_OVERRUN | UART_STATUS_RX_OVERRUN;
-}
+#include "neocore-fx/dhrystone/ncx_uart_mmio.h"
 
 static void uart_putc(char c) {
   if (c == '\n') {
-    while ((*mmio(UART_STATUS_OFF) & UART_STATUS_TX_READY) == 0u)
-      ;
-    *mmio(UART_TXDATA_OFF) = (uint32_t)'\r';
+    ncx_uart_putc((uint8_t)'\r');
   }
-  while ((*mmio(UART_STATUS_OFF) & UART_STATUS_TX_READY) == 0u)
-    ;
-  *mmio(UART_TXDATA_OFF) = (uint32_t)(uint8_t)c;
+  ncx_uart_putc((uint8_t)c);
 }
 
 static void uart_puts(const char *s) {
-  while (*s != '\0')
-    uart_putc(*s++);
+  ncx_uart_puts(s);
 }
 
 static char uart_getc(void) {
-  while ((*mmio(UART_STATUS_OFF) & UART_STATUS_RX_VALID) == 0u)
-    ;
-  return (char)(*mmio(UART_RXDATA_OFF) & 0xFFu);
+  return (char)ncx_uart_getc();
 }
 
 /* tiny print helpers */
@@ -481,7 +446,7 @@ static void run_command(char *line) {
 int main(void) {
   char line[160];
 
-  uart_init();
+  ncx_uart_init();
 
   uart_puts("\nneo monitor\n");
   uart_puts("type ? for help\n");
